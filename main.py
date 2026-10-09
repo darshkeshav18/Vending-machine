@@ -52,7 +52,11 @@ def display_cart(cart: Dict[str, logic.CartItem]):
     print(f"Total: Rs {total}")
 
 def customer_flow():
-    phone = input("\nEnter your phone number: ").strip()
+    while True:
+        phone = input("\nEnter your phone number: ").strip()
+        if len(phone) == 10 and phone.isdigit():
+            break
+        display_error("Phone number must contain exactly 10 digits. Please try again.")
     name = input("Enter your name: ").strip()
     
     customer = store.get_or_create_customer(phone, name)
