@@ -1,5 +1,3 @@
-import sys
-import os
 from datetime import datetime
 from typing import Dict, Optional
 
@@ -81,7 +79,8 @@ def customer_flow():
         print("9. View Receipt")
         print("10. View Order History")
         print("11. View Customer Report")
-        print("12. Exit")
+        print("12. Exchange / Returns")
+        print("13. Exit")
         
         choice = input("Select an option: ").strip()
         
@@ -253,8 +252,9 @@ def customer_flow():
             res = store.checkout(customer, cart, logic.CheckoutRequest(points_to_redeem, cash_tendered, active_coupon_code), get_current_date())
             
             if res.success:
+                order_id = getattr(res.order, "order_id", "Unknown")
                 print("\nPayment successful! Your order has been placed.")
-                print(f"Order ID: {res.order.order_id}")
+                print(f"Order ID: {order_id}")
                 cart.clear()
                 active_coupon_code = None
                 active_selected_product_id = None
@@ -314,6 +314,74 @@ def customer_flow():
                 print(f"{k}: {v}")
                 
         elif choice == "12":
+            while True:
+                print("\n--- Exchange / Returns ---")
+                print("1. Return Purchased Item")
+                print("2. Exchange Item")
+                print("3. Back to Customer Menu")
+                
+                sub_ret = input("Select an option: ").strip()
+                if sub_ret == "1":
+                    orders = store.get_orders_for_customer(phone)
+                    if not orders:
+                        print("\nYou have no previous orders.")
+                        break
+                        
+                    print("\n--- Your Orders ---")
+                    for o in orders:
+                        print(f"{o.timestamp} - {o.order_id} - Rs {o.final_total}")
+                        
+                    oid = input("\nEnter Order ID to return an item: ").strip().upper()
+                    selected = next((o for o in orders if o.order_id == oid), None)
+                    if not selected:
+                        display_error("Order not found or does not belong to you.")
+                    else:
+                        print("\nItems in this order:")
+                        for item in selected.items:
+                            p_name = store.get_product(item.product_id).name if store.get_product(item.product_id) else "Unknown"
+                            print(f"{item.product_id} - {p_name} - Qty: {item.qty}")
+                            
+                        pid = input("Enter Product ID to return: ").strip().upper()
+                        try:
+                            qty = int(input("Enter quantity to return: ").strip())
+                        except ValueError:
+                            display_error("Invalid quantity.")
+                            continue
+                            
+                        print("Return Reason (1: Damaged, 2: Expired, 3: Other)")
+                        reason_choice = input("Select reason: ").strip()
+                        reason = "Damaged" if reason_choice == "1" else "Expired" if reason_choice == "2" else "Other"
+                        
+                        desc = None
+                        exp = None
+                        if reason == "Damaged":
+                            desc = input("Enter damage description: ").strip()
+                        elif reason == "Expired":
+                            exp = input("Enter expiry date (YYYY-MM-DD): ").strip()
+                            
+                        req = logic.ReturnRequest(oid, pid, qty, reason, exp, desc)
+                        res = store.process_return(req, get_current_date())
+                        
+                        if res.success:
+                            print(f"\nReturn processed successfully.")
+                            print(f"Refund amount: Rs {res.refund_amount}")
+                            print(f"Loyalty points awarded for refund: {res.points_awarded}")
+                            cust_after = store.get_customer(phone)
+                            if cust_after:
+                                print(f"Updated loyalty balance: {cust_after.loyalty_points} points")
+                        else:
+                            display_error(res.error_msg)
+                            
+                        if not ask_continue("\nDo you want to process another return?"):
+                            break
+                elif sub_ret == "2":
+                    print("\nDirect exchanges are not currently supported by the system. Please use the 'Return Purchased Item' option and place a new order for the desired product.")
+                elif sub_ret == "3":
+                    break
+                else:
+                    display_error("Invalid choice.")
+                    
+        elif choice == "13":
             break
         else:
             display_error("Invalid choice.")
@@ -370,6 +438,9 @@ def owner_flow():
                     display_error("Product not found.")
                 else:
                     p = store.get_product(pid)
+                    if p is None:
+                        display_error("Product not found.")
+                        continue
                     print(f"\nSelected: {p.name} ({p.product_id})")
                     try:
                         qty = int(input("Quantity to add: ").strip())
@@ -388,7 +459,10 @@ def owner_flow():
                         if success:
                             print(msg)
                             updated_p = store.get_product(pid)
-                            print(f"Updated sellable quantity: {updated_p.sellable_qty}")
+                            if updated_p is not None:
+                                print(f"Updated sellable quantity: {updated_p.sellable_qty}")
+                            else:
+                                print("Updated stock successfully.")
                         else:
                             display_error(msg)
                             
@@ -400,8 +474,11 @@ def owner_flow():
                     name = input("Product Name: ").strip()
                     print("Categories:\n1. Cold Beverages\n2. Hot Beverages\n3. Snacks")
                     cat_choice = input("Select Category (1-3): ").strip()
-                    cat = "Cold Beverages" if cat_choice == "1" else "Hot Beverages" if cat_choice == "2" else "Snacks" if cat_choice == "3" else None
-                    
+                    if cat_choice not in {"1", "2", "3"}:
+                        display_error("Invalid category selection.")
+                        continue
+                    cat = "Cold Beverages" if cat_choice == "1" else "Hot Beverages" if cat_choice == "2" else "Snacks"
+
                     try:
                         price = int(input("Selling Price: Rs ").strip())
                         qty = int(input("Initial Stock Quantity: ").strip())
