@@ -564,16 +564,18 @@ Please avoid committing sensitive information, real customer records, or credent
 
 ---
 
-## License
+## Team Members
 
-No license has been specified for this project yet.
+This project was developed collaboratively by the following team members:
 
-If you intend to allow others to use, modify, or distribute the code, consider adding an appropriate open-source license file.
+- **Darsh Keshav**
+- **Chaitanya**
+- **Akshay**
 
 ---
 
-## Author
+## Project
 
 **Vending Machine Management System**
 
-A Python project demonstrating command-line application development, inventory management, transaction processing, CSV persistence, and automated testing.
+A Python-based project demonstrating command-line application development, inventory management, transaction processing, CSV data persistence, and automated testing.
