@@ -25,7 +25,7 @@ The application supports two types of users: **Customers**, who can browse produ
 - [Validation and Error Handling](#validation-and-error-handling)
 - [Future Improvements](#future-improvements)
 - [Contributing](#contributing)
-- [License](#license)
+- [Team Members](#Team-Members)
 
 ---
 
