@@ -335,3 +335,37 @@ def add_new_product(pid: str, name: str, cat: str, price: int, qty: int, cost: i
         return False, "Product ID already exists."
     PRODUCTS[pid] = logic.Product(pid, name, cat, price, cost, 2, 2)
     return add_stock(pid, qty, cost, expiry, added_at)
+
+def create_coupon(code: str, percent: int, min_order: int, first_time: bool, usage_limit: int) -> Tuple[bool, str]:
+    if code in COUPONS:
+        return False, "Coupon code already exists."
+    COUPONS[code] = logic.Coupon(code, percent, min_order, first_time, True, usage_limit, [])
+    return True, "Coupon created successfully."
+
+def update_coupon(code: str, percent: int, min_order: int, first_time: bool, usage_limit: int) -> Tuple[bool, str]:
+    if code not in COUPONS:
+        return False, "Coupon not found."
+    cpn = COUPONS[code]
+    cpn.percent_off = percent
+    cpn.min_order = min_order
+    cpn.first_time_only = first_time
+    cpn.usage_limit_per_customer = usage_limit
+    return True, "Coupon updated successfully."
+
+def toggle_coupon(code: str) -> Tuple[bool, str]:
+    if code not in COUPONS:
+        return False, "Coupon not found."
+    COUPONS[code].enabled = not COUPONS[code].enabled
+    status = "enabled" if COUPONS[code].enabled else "disabled"
+    return True, f"Coupon {status}."
+
+def delete_coupon(code: str) -> Tuple[bool, str]:
+    if code not in COUPONS:
+        return False, "Coupon not found."
+    del COUPONS[code]
+    return True, "Coupon deleted."
+
+def get_returns_for_customer(phone: str) -> List[logic.Return]:
+    # We find order IDs for this customer, then match returns
+    cust_order_ids = {o.order_id for o in ORDERS.values() if o.customer_phone == phone}
+    return [r for r in RETURNS.values() if r.order_id in cust_order_ids]
