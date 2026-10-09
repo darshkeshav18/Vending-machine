@@ -411,3 +411,29 @@ def calculate_profit_loss(orders: List[Order], products: Dict[str, Product], ret
         "Stock Losses": stock_losses,
         "Net Result": net_profit
     }
+
+def validate_coupon_management_input(code: str, percent: int, min_order: int, usage_limit: int) -> Tuple[bool, str]:
+    if not code:
+        return False, "Coupon code cannot be empty."
+    if percent <= 0 or percent > 100:
+        return False, "Discount percentage must be between 1 and 100."
+    if min_order < 0:
+        return False, "Minimum order amount cannot be negative."
+    if usage_limit < 1:
+        return False, "Usage limit must be at least 1."
+    return True, "Valid input."
+
+def calculate_customer_report(customer: Customer, orders: List[Order], returns: List[Return]) -> Dict[str, any]:
+    total_orders = len(orders)
+    total_spending = sum(o.final_total for o in orders)
+    total_returns = len(returns)
+    total_refunds = sum(r.refund_amount for r in returns)
+    return {
+        "Name": customer.name,
+        "Phone": customer.phone,
+        "Loyalty Points": customer.loyalty_points,
+        "Total Orders": total_orders,
+        "Total Spending": total_spending,
+        "Total Returns": total_returns,
+        "Total Refunded": total_refunds
+    }
