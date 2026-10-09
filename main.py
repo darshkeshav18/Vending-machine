@@ -22,6 +22,20 @@ def display_error(msg: str):
     print(f"\nError: {msg}")
 
 
+def display_catalog(cart: Dict[str, logic.CartItem]):
+    print("\n--- Product Catalogue ---")
+    print(f"{'ID':<6} | {'Name':<15} | {'Price':<7} | {'Available':<9} | {'Status'}")
+    print("-" * 65)
+    categories = store.get_categories()
+    for cat in categories:
+        prods = store.get_all_products(get_current_date(), cat)
+        if not prods: continue
+        print(f"\n[{cat}]")
+        for p in prods:
+            effective_qty = logic.get_available_quantity_after_cart(p, cart)
+            status = "In Stock" if effective_qty > 0 else "Out of Stock"
+            print(f"{p.product_id:<6} | {p.name:<15} | Rs {p.price:<4} | {effective_qty:<9} | {status}")
+
 def display_cart(cart: Dict[str, logic.CartItem]):
     print("\n--- Current Cart ---")
     print(f"{'ID':<6} | {'Name':<15} | {'Qty':<5} | {'Subtotal'}")
@@ -68,20 +82,10 @@ def customer_flow():
         choice = input("Select an option: ").strip()
         
         if choice == "1":
-            print("\n--- Product Catalogue ---")
-            print(f"{'ID':<6} | {'Name':<15} | {'Price':<7} | {'Available':<9} | {'Status'}")
-            print("-" * 65)
-            categories = store.get_categories()
-            for cat in categories:
-                prods = store.get_all_products(get_current_date(), cat)
-                if not prods: continue
-                print(f"\n[{cat}]")
-                for p in prods:
-                    effective_qty = logic.get_available_quantity_after_cart(p, cart)
-                    status = "In Stock" if effective_qty > 0 else "Out of Stock"
-                    print(f"{p.product_id:<6} | {p.name:<15} | Rs {p.price:<4} | {effective_qty:<9} | {status}")
+            display_catalog(cart)
                     
         elif choice == "2":
+            display_catalog(cart)
             pid = input("\nEnter Product ID to select: ").strip().upper()
             p = store.get_product(pid)
             if not p:
@@ -99,6 +103,7 @@ def customer_flow():
                     print("Currently Out of Stock.")
                     
         elif choice == "3":
+            display_catalog(cart)
             if not active_selected_product_id:
                 display_error("Please select a product first (Option 2).")
                 continue
@@ -157,13 +162,45 @@ def customer_flow():
             print("2. Remove Coupon")
             sub = input("Select option: ").strip()
             if sub == "1":
-                code = input("Enter coupon code: ").strip().upper()
+                coupons = [c for c in store.get_all_coupons() if c.enabled]
+                if not coupons:
+                    print("No active coupons are currently available.")
+                    continue
+                    
+                print("\n--- Available Coupons ---")
+                print(f"{'Code':<13} {'Discount':<14} {'Minimum Order':<19} {'Status'}")
+                print("-" * 60)
+                
+                cart_total = logic.get_cart_total(cart)
+                customer_latest = store.get_or_create_customer(phone, customer.name)
+                
+                for c_item in coupons:
+                    valid, _, msg = logic.validate_and_apply_coupon(cart_total, c_item, customer_latest)
+                    if valid:
+                        status = "Eligible"
+                    else:
+                        if cart_total < c_item.min_order:
+                            short = c_item.min_order - cart_total
+                            status = f"Not Eligible (Add Rs {short} more)"
+                        elif c_item.first_time_only and not customer_latest.is_first_time:
+                            status = "Not Eligible (First-time customers only)"
+                        elif c_item.used_by.count(customer_latest.phone) >= c_item.usage_limit_per_customer:
+                            status = "Not Eligible (Usage limit reached)"
+                        else:
+                            status = f"Not Eligible ({msg})"
+                            
+                    print(f"{c_item.code:<13} {str(c_item.percent_off) + '% OFF':<14} {'Rs ' + str(c_item.min_order):<19} {status}")
+                    
+                code = input("\nEnter coupon code to apply (or type 0 to cancel): ").strip().upper()
+                if code == "0":
+                    print("Coupon application cancelled.")
+                    continue
+                    
                 cpn = store.get_coupon(code)
-                if not cpn:
-                    display_error("Invalid coupon code.")
+                if not cpn or not cpn.enabled:
+                    display_error("Invalid or disabled coupon code.")
                 else:
-                    customer = store.get_or_create_customer(phone, customer.name)
-                    valid, discount, msg = logic.validate_and_apply_coupon(logic.get_cart_total(cart), cpn, customer)
+                    valid, discount, msg = logic.validate_and_apply_coupon(cart_total, cpn, customer_latest)
                     if valid:
                         active_coupon_code = code
                         print(f"Coupon {code} applied. Discount: Rs {discount}")
