@@ -34,6 +34,8 @@ def _init_defaults():
     COUPONS.clear()
     COUPONS["SAVE20"] = logic.Coupon("SAVE20", 20, 500, False, True, 5, [])
     COUPONS["WELCOME40"] = logic.Coupon("WELCOME40", 40, 100, True, True, 1, [])
+    COUPONS["SAVE10"] = logic.Coupon("SAVE10", 10, 1000, False, True, 5, [])
+    COUPONS["SAVE5"] = logic.Coupon("SAVE5", 5, 2000, False, True, 5, [])
 
 def load_data(filepath: str = "data.csv") -> None:
     global PRODUCTS, CUSTOMERS, COUPONS, ORDERS, STOCK_REMOVALS, RETURNS, OWNER_AUTH
@@ -109,6 +111,11 @@ def load_data(filepath: str = "data.csv") -> None:
     except Exception:
         if not PRODUCTS:
             _init_defaults()
+            
+    if "SAVE10" not in COUPONS:
+        COUPONS["SAVE10"] = logic.Coupon("SAVE10", 10, 1000, False, True, 5, [])
+    if "SAVE5" not in COUPONS:
+        COUPONS["SAVE5"] = logic.Coupon("SAVE5", 5, 2000, False, True, 5, [])
 
 def save_data(filepath: str = "data.csv") -> None:
     temp_filepath = filepath + ".tmp"
